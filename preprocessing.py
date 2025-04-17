@@ -3,8 +3,9 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, Normalizer
 import torch
+import pickle
 
-def get_month(file='usa_0_regional_monthly.csv', month=1):
+def get_month(file, month=1):
     """Filters a specific month out of the dataset.
 
     Args:
@@ -25,8 +26,8 @@ def get_month(file='usa_0_regional_monthly.csv', month=1):
             month_cols.append(col)
     return df[month_cols], month
 
-def get_wind(cuda=False):
-    df, month = get_month()
+def get_wind(file='usa_0_regional_monthly.csv', cuda=False):
+    df, month = get_month(file)
     # get names of features by month
     feature_cols = ['Year', 'lat', 'lng', 'alt', f'T2M_{month}',
        f'T2M_MAX_{month}', f'T2M_MIN_{month}', f'PS_{month}', f'QV2M_{month}',
@@ -74,7 +75,10 @@ def get_wind(cuda=False):
         'output_labels': output_cols,
         'y_scaler': scaler_Y
     }
-    return dataset
+    name = ''.join(file.split('_')[:2])
+    with open(f'{name}_dict.pkl', 'wb') as f:
+        pickle.dump(dataset, f)
+    return
 
-
-get_wind(cuda=False)
+if __name__=="__main__":
+    get_wind(snakemake.input.file, cuda=False)
