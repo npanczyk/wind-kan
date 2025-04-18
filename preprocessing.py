@@ -81,4 +81,4 @@ def get_wind(file='usa_0_regional_monthly.csv', cuda=False):
     return
 
 if __name__=="__main__":
-    get_wind(snakemake.input.file, cuda=False)
+    get_wind(snakemake.input.file, cuda=True)
