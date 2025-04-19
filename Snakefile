@@ -1,5 +1,5 @@
 import datetime as dt
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="3"
 configfile: 'config.yml'
 name = config['name']
 
@@ -18,15 +18,13 @@ rule hypertune_kan:
         results = f'hyperparameters/{name}/kan_R2.txt',
     script: "kan_hypertuning.py"
 
-# rule hypertune_fnn:
-#     input:
-#         dataset = f'{name}_dict.pkl',
-#         run_name = f"{name.upper()}_{str(dt.date.today())}",
-#         evals = 1,
-#     output: 
-#         params = 'hyperparameters/{input.run_name}/fnn_params.txt',
-#         results = 'hyperparameters/{input.run_name}/fnn_R2.txt'
-#     script: "fnn_hypertuning.py"
+rule hypertune_fnn:
+    input:
+        dataset = f'{name}_dict.pkl',
+    output: 
+        params = f'hyperparameters/{name}/fnn_params.txt',
+        results = f'hyperparameters/{name}/fnn_MSE.txt'
+    script: "fnn_hypertuning.py"
 
 # rule hypersort_kan:
 #     input:

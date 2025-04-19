@@ -1,1 +1,3 @@
-{'depth': 2, 'grid': 7, 'k': 5, 'lamb': 0.00042976059355348664, 'lamb_entropy': 4.401113786605837, 'lr_1': 1.25, 'lr_2': 0.75, 'reg_metric': 'edge_backward', 'steps': 125}
+{'depth': 1, 'grid': 9, 'k': 6, 'lamb': 0.0007216258051530346, 'lamb_entropy': 5.304357403887405, 'lr_1': 0.5, 'lr_2': 0.75, 'reg_metric': 'edge_forward_spline_u', 'steps': 150}
+{'depth': 1, 'grid': 4, 'k': 2, 'lamb': 0.0005982526814162297, 'lamb_entropy': 8.667677254014656, 'lr_1': 1.5, 'lr_2': 2, 'reg_metric': 'edge_backward', 'steps': 25}
+{'depth': 2, 'grid': 7, 'k': 8, 'lamb': 0.0002909704364471567, 'lamb_entropy': 0.629053901494343, 'lr_1': 1.75, 'lr_2': 1, 'reg_metric': 'node_backward', 'steps': 100}

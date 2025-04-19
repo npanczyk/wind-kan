@@ -21,12 +21,8 @@ Please see `report.pdf` for the final report describing the analysis performed i
 code blocks for commands
 ```
 
-## Authors
+## Citation
 
-Contributors names and contact info
-
-ex. Dominique Pizzie  
-ex. [@DomPizzie](https://twitter.com/dompizzie)
 
 
 ## License

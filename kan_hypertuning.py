@@ -30,9 +30,7 @@ class Tuner():
         try:
             os.makedirs(f"hyperparameters/{self.run_name}")
         except FileExistsError:
-            files = os.listdir(f"hyperparameters/{self.run_name}")
-            for file in files:
-                os.remove(f"hyperparameters/{self.run_name}/{file}")
+            pass
 
     def objective(self, params):
         """This function is used as an starter objective function for hyperopt's fmin() (not the final objective function).
@@ -190,6 +188,7 @@ def tune_case(tuner):
                     obj=tuner.objective, 
                     space=tuner.space, 
                     max_evals=tuner.max_evals)
+    print(f'Best Hyperparameters for KAN: {best}')
     return 
 
 if __name__ == "__main__":
@@ -216,7 +215,7 @@ if __name__ == "__main__":
                     dataset = data_dict, 
                     run_name = snakemake.config['name'], 
                     space = space, 
-                    max_evals = 1,
+                    max_evals = 50,
                     seed = 42, 
                     device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
                     symbolic = True)

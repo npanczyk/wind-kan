@@ -10,6 +10,8 @@ import shutil
 import os
 import csv
 import datetime as dt
+from fnn import *
+import pickle
 
 torch.set_default_dtype(torch.float64)
 
@@ -25,31 +27,67 @@ class Tuner():
         self.seed = seed
         self.device = device
         self.symbolic = symbolic
-        # make sure our file structure is ready to go
         try:
             os.makedirs(f"hyperparameters/{self.run_name}")
         except FileExistsError:
-            files = os.listdir(f"hyperparameters/{self.run_name}")
-            for file in files:
-                os.remove(f"hyperparameters/{self.run_name}/{file}")
+            pass
 
     def objective(self, params):
         # write the params for this run to an output file
-        with open(f"hyperparameters/{self.run_name}/kan_params.txt", "a") as results:
+        with open(f"hyperparameters/{self.run_name}/fnn_params.txt", "a") as results:
             results.write(f"{params}\n")
         # break up the params dictionary
-        dataset = params['dataset'](cuda=True)
-        input_size = dataset['train_input'].shape[1]
-        hidden_nodes = params['hidden_nodes']
-        output_size = dataset['train_output'].shape[1]
-        num_epochs = params['num_epochs']
-        batch_size = params['batch_size']
+        #dataset = params['dataset']
+        input_size = self.dataset['train_input'].shape[1]
+        hidden_nodes = [int(params['hidden_nodes']) for i in range(params['n_layers'])]
+        print(f'HIDDEN NODES: {hidden_nodes}')
+        output_size = self.dataset['train_output'].shape[1]
+        num_epochs = int(params['num_epochs'])
+        batch_size = int(params['batch_size'])
         learning_rate = params['learning_rate']
         use_dropout = params['use_dropout']
         dropout_prob = params['dropout_prob']
 
-        """FINISH OBJECTIVE FUNC HERE
-        """
+        # get train and test data from dataset
+        train_data = TensorDataset(self.dataset['train_input'], self.dataset['train_output'])
+        test_data = TensorDataset(self.dataset['test_input'], self.dataset['test_output'])
+
+        # write dataloaders
+        train_loader = DataLoader(dataset=train_data, batch_size=batch_size, shuffle=True)
+        test_loader = DataLoader(dataset=test_data, batch_size=batch_size, shuffle=False)
+
+        # define the model
+        model = FNN(input_size, hidden_nodes, output_size).to(self.device)
+        criterion = nn.MSELoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+        # training
+        n_total_steps = len(train_loader)
+        for epoch in range(num_epochs):
+            model.train()
+            for i, (x_train, y_train) in enumerate(train_loader):
+                x_train, y_train = x_train.to(self.device).float(), y_train.to(self.device).float()
+                y_pred = model(x_train)
+                loss = criterion(y_pred, y_train)
+                # backpropagation
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+        
+        # validation
+        model.eval()
+        val_loss = 0
+        with torch.no_grad():
+            for x_test, y_test in test_loader:
+                x_test, y_test = x_test.to(self.device).float(), y_test.to(self.device).float()
+                output = model(x_test)
+                loss = criterion(output, y_test)
+                val_loss += loss.item()
+        
+        avg_loss = val_loss/len(test_loader)
+        with open(f"hyperparameters/{self.run_name}/fnn_MSE.txt", "a") as results:
+            results.write(f"AVG MSE: {avg_loss}\n")
+        return avg_loss
 
 
 def tune(obj, space, max_evals, algorithm=None):
@@ -67,33 +105,33 @@ def tune_case(tuner):
                     obj=tuner.objective, 
                     space=tuner.space, 
                     max_evals=tuner.max_evals)
+    print(f'Best Hyperparameters for FNN: {best}')
     return 
 
 if __name__ == "__main__":
     space = {
-        "depth": hp.choice("depth", [1, 2]),
-        "grid": hp.choice("grid", [3, 4, 5, 6, 7, 8, 9, 10]),
-        "k": hp.choice("k", [2, 3, 4, 5, 6, 7, 8]),
-        "steps": hp.choice("steps", [25, 50, 75, 100, 125, 150, 200, 250]),
-        "lamb": hp.uniform("lamb", 0, 0.001),
-        "lamb_entropy": hp.uniform("lamb_entropy", 0, 10),
-        "lr_1": hp.choice("lr_1", [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]), 
-        "lr_2": hp.choice("lr_2", [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]),
-        "reg_metric": hp.choice("reg_metric", ["edge_forward_spline_n",
-                                                "edge_forward_sum",
-                                                "edge_forward_spline_u",
-                                                "edge_backward",
-                                                "node_backward"])
-            }
+        'hidden_nodes': hp.quniform('hidden_nodes', 32, 512, 32), 
+        'num_epochs': hp.quniform('num_epochs', 10, 100, 5),  # Discrete values 
+        'batch_size': hp.choice('batch_size', [32, 64, 128, 256]),  # Discrete 
+        'learning_rate': hp.loguniform('learning_rate', np.log(1e-5), np.log(1e-2)), 
+        'use_dropout': hp.choice('use_dropout', [True, False]), 
+        'dropout_prob': hp.uniform('dropout_prob', 0.0, 0.5),
+        'n_layers': hp.choice('n_layers', [1,2,3,4,5])
+        } 
+   # get the dataset  
+    with open(snakemake.input.dataset, 'rb') as f:
+        data_dict = pickle.load(f)
+
     tuner = Tuner(
-                    dataset = snakemake.input.dataset, 
-                    run_name = snakemake.input.run_name, 
+                    dataset = data_dict, 
+                    run_name = snakemake.config['name'], 
                     space = space, 
-                    max_evals = 1,
+                    max_evals = 50,
                     seed = 42, 
                     device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
                     symbolic = True)
-    try:
-        tune_case(tuner)
-    except Exception as e:
-        print(f"TUNING INTERRUPTED! Error: {e}")
+    tune_case(tuner)
+    # try:
+    #     tune_case(tuner)
+    # except Exception as e:
+    #     print(f"TUNING INTERRUPTED! Error: {e}")

@@ -26,7 +26,7 @@ def get_month(file, month=1):
             month_cols.append(col)
     return df[month_cols], month
 
-def get_wind(file='usa_0_regional_monthly.csv', cuda=False):
+def get_wind(file='usa_0_regional_monthly.csv', cuda=True):
     df, month = get_month(file)
     # get names of features by month
     feature_cols = ['Year', 'lat', 'lng', 'alt', f'T2M_{month}',
